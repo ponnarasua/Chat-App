@@ -1,141 +1,331 @@
 package view;
 
-import controller.UsersController;
-import controller.*;
-import model.Chat;
+import controller.ChatController;
+import controller.ContactController;
+import controller.UserController;
+import java.util.List;
+import java.util.Scanner;
 import model.Contact;
+import model.Message;
 import model.User;
 
-import java.util.*;
+public class ConsoleView {
 
+    private final Scanner scanner = new Scanner(System.in);
+    private final UserController userController = new UserController();
+    private final ContactController contactController = new ContactController();
+    private final ChatController chatController = new ChatController();
 
-public class Menu {
-    private UsersController usersController;
-    private ChatController chatController;
-    private ContactController contactController;
-    private Scanner scanner;
+    private User currentUser = null;
 
-    public Menu(UsersController usersController, ChatController chatController, ContactController contactController) {
-        this.usersController = usersController;
-        this.chatController = chatController;
-        this.contactController = contactController;
-        this.scanner = new Scanner(System.in);
+    public void start() {
+        while (true) {
+            showEntryPage();
+        }
     }
 
-    public void displayMenu() {
-        String phone = null;
-        while (true) {
-            System.out.println("\n--- Chat App ---");
-            System.out.println("1. Register");
-            System.out.println("2. Login");
-            System.out.println("00. Exit");
-            System.out.print("Choose an option: ");
-            String choice = scanner.nextLine();
+    private void showEntryPage() {
+        System.out.println("\n==== RealTime Chat Application ====");
+        System.out.println("1. Login");
+        System.out.println("2. Register");
+        System.out.println("3. Exit");
+        System.out.print("Enter Option: ");
+        String input = scanner.nextLine();
+        if (input.equals("000")) return;
 
-            switch (choice) {
-                case "1": register(); break;
-                case "2": phone = login(); break;
-                case "00": return;
-                default: System.out.println("Invalid Option.");
+        switch (input) {
+            case "1" -> login();
+            case "2" -> register();
+            case "3" -> {
+                System.out.println("Exiting. Goodbye!");
+                System.exit(0);
             }
+            default -> System.out.println("Invalid option.");
+        }
+    }
 
-            if (phone != null) {
-                while (true) {
-                    System.out.print("1. View Contacts\n2. Start Chat\n00. Logout\nEnter choice: ");
-                    choice = scanner.nextLine();
-                    switch (choice) {
-                        case "1": viewContacts(); break;
-                        case "2": startChat(phone); break;
-                        case "00": phone = null; break;
-                        default: System.out.println("Invalid Option.");
-                    }
+    private void login() {
+        System.out.print("Phone Number (or 000 to go back): ");
+        String phone = scanner.nextLine();
+        if (phone.equals("000")) return;
+        System.out.print("Password (or 000 to go back): ");
+        String password = scanner.nextLine();
+        if (password.equals("000")) return;
+
+        User user = userController.login(phone, password);
+        if (user != null) {
+            currentUser = user;
+            showOptions();
+        } else {
+            System.out.println("Invalid credentials.");
+        }
+    }
+
+    private void register() {
+        System.out.print("Username (or 000 to go back): ");
+        String username = scanner.nextLine();
+        if (username.equals("000")) return;
+        System.out.print("Phone Number (or 000 to go back): ");
+        String phone = scanner.nextLine();
+        if (phone.equals("000")) return;
+        System.out.print("Password (or 000 to go back): ");
+        String password = scanner.nextLine();
+        if (password.equals("000")) return;
+        System.out.print("Email (or 000 to go back): ");
+        String email = scanner.nextLine();
+        if (email.equals("000")) return;
+
+        boolean success = userController.register(username, phone, password, email);
+        System.out.println(success ? "Registered successfully. Please login." : "Registration failed.");
+    }
+
+    private void showOptions() {
+        while (true) {
+            System.out.println("\n==== Options ====");
+            System.out.println("1. Contacts");
+            System.out.println("2. Chats");
+            System.out.println("3. Settings");
+            System.out.println("4. Logout");
+            System.out.print("Option (or 000 to logout): ");
+            String input = scanner.nextLine();
+            if (input.equals("000") || input.equals("4")) {
+                currentUser = null;
+                System.out.println("Logged out.");
+                return;
+            }
+            switch (input) {
+                case "1" -> contactsPage();
+                case "2" -> chatsPage();
+                case "3" -> settingsPage();
+                default -> System.out.println("Invalid option.");
+            }
+        }
+    }
+
+    private void contactsPage() {
+        while (true) {
+            System.out.println("\n==== Contacts ====");
+            System.out.println("1. View Contacts");
+            System.out.println("2. Save Contact");
+            System.out.println("3. Back");
+            System.out.print("Option (or 000 to go back): ");
+            String input = scanner.nextLine();
+            if (input.equals("000") || input.equals("3")) return;
+            switch (input) {
+                case "1" -> viewContacts();
+                case "2" -> saveContact();
+                default -> System.out.println("Invalid option.");
+            }
+        }
+    }
+
+    private void viewContacts() {
+        List<Contact> contacts = contactController.getContactsByUserId(currentUser.getId());
+        if (contacts.isEmpty()) {
+            System.out.println("No contacts.");
+        } else {
+            for (Contact c : contacts) {
+                System.out.printf("Name: %s, Phone: %s%n", c.getContactName(), c.getContactPhone());
+            }
+        }
+    }
+
+    private void saveContact() {
+        System.out.print("Contact Name (or 000 to go back): ");
+        String name = scanner.nextLine();
+        if (name.equals("000")) return;
+        System.out.print("Contact Phone (or 000 to go back): ");
+        String phone = scanner.nextLine();
+        if (phone.equals("000")) return;
+        boolean success = contactController.saveContact(currentUser.getId(), name, phone);
+        System.out.println(success ? "Saved." : "Failed.");
+    }
+
+    private void chatsPage() {
+        while (true) {
+            System.out.println("\n==== Chats ====");
+            System.out.println("1. Search Contact by Name");
+            System.out.println("2. Recent Chats");
+            System.out.println("3. Back");
+            System.out.print("Option (or 000 to go back): ");
+            String input = scanner.nextLine();
+            if (input.equals("000") || input.equals("3")) return;
+            switch (input) {
+                case "1" -> searchContactChat();
+                case "2" -> recentChats();
+                default -> System.out.println("Invalid option.");
+            }
+        }
+    }
+
+    private void searchContactChat() {
+        System.out.print("Enter Contact Name (or 000 to go back): ");
+        String name = scanner.nextLine();
+        if (name.equals("000")) return;
+        List<Contact> contacts = contactController.getContactsByUserId(currentUser.getId());
+        Contact contact = null;
+        for (Contact c : contacts) {
+            if (c.getContactName().equalsIgnoreCase(name)) {
+                contact = c;
+                break;
+            }
+        }
+        if (contact != null) chatWithContact(contact);
+        else System.out.println("Contact not found.");
+    }
+
+    private void recentChats() {
+        List<Contact> contacts = contactController.getContactsByUserId(currentUser.getId());
+        boolean any = false;
+        for (Contact c : contacts) {
+            User udp = userController.getUserByPhone(c.getContactPhone());
+            if (udp != null) {
+                List<Message> messages = chatController.getChatHistory(currentUser.getId(), udp.getId());
+                if (!messages.isEmpty()) {
+                    any = true;
+                    System.out.printf("Chat with %s (%s)%n", c.getContactName(), c.getContactPhone());
                 }
             }
         }
-    }
-    private void register() {
-        System.out.print("Enter Name: ");
+        if (!any) {
+            System.out.println("No recent chats.");
+            return;
+        }
+        System.out.print("Enter Contact Name to open chat (or 000): ");
         String name = scanner.nextLine();
-        System.out.print("Enter Phone: ");
-        String phone = scanner.nextLine();
-        System.out.print("Enter Password: ");
-        String password = scanner.nextLine();
-        System.out.print("Enter Email: ");
-        String email = scanner.nextLine();
-        System.out.print("Enter DOB (YYYY-MM-DD): ");
-        String dob = scanner.nextLine();
-        String role = "user";
-
-        if (usersController.registerUser(name, phone, password, email, dob, role)) {
-            System.out.println("Registration Successful!");
-        } else {
-            System.out.println("Registration Failed!");
-        }
-    }
-
-    private String login() {
-        System.out.print("Enter Phone: ");
-        String phone = scanner.nextLine();
-        System.out.print("Enter Password: ");
-        String password = scanner.nextLine();
-
-        User user = usersController.loginUser (phone, password);
-        if (user != null) {
-            System.out.println("Login Successful! Welcome " + user.getName());
-            return user.getPhone();
-        } else {
-            System.out.println("Invalid Credentials!");
-            return null;
-        }
-    }
-    private void viewContacts() {
-        // Fetch and display contacts
-        List<Contact> contacts = contactController.getAllContacts(); // Implement this method in ContactController
-        System.out.println("--- Contacts ---");
-        for (int i = 0; i < contacts.size(); i++) {
-            System.out.println((i + 1) + ". " + contacts.get(i).getName() + " (" + contacts.get(i).getPhone() + ")");
-        }
-        System.out.println("Enter the number to chat or '00' to go back:");
-        String choice = scanner.nextLine();
-        if (choice.equals("00")) {
-            return; // Go back
-        }
-        try {
-            int index = Integer.parseInt(choice) - 1;
-            if (index >= 0 && index < contacts.size()) {
-                startChatWithContact(contacts.get(index).getPhone());
-            } else {
-                System.out.println("Invalid choice.");
+        if (name.equals("000")) return;
+        Contact contact = null;
+        for (Contact c : contacts) {
+            if (c.getContactName().equalsIgnoreCase(name)) {
+                contact = c;
+                break;
             }
-        } catch (NumberFormatException e) {
-            System.out.println("Invalid input.");
         }
+        if (contact != null) chatWithContact(contact);
+        else System.out.println("Contact not found.");
     }
 
-    private void startChat(String phone) {
-        // This method can be used to start a chat with a known number or saved contact
-        System.out.print("Enter the phone number or '00' to go back: ");
-        String input = scanner.nextLine();
-        if (input.equals("00")) {
-            return; // Go back
+    private void chatWithContact(Contact contact) {
+        User receiver = userController.getUserByPhone(contact.getContactPhone());
+        if (receiver == null) {
+            System.out.println("Contact user not registered.");
+            return;
         }
-        startChatWithContact(input);
-    }
-
-    private void startChatWithContact(String contactPhone) {
+        System.out.println("\n==== Chat with " + contact.getContactName() + " ====");
+        List<Message> messages = chatController.getChatHistory(currentUser.getId(), receiver.getId());
+        if (messages.isEmpty()) System.out.println("No previous chat.");
+        else {
+            for (Message m : messages) {
+                String who = (m.getSenderId() == currentUser.getId()) ? "You" : contact.getContactName();
+                System.out.printf("[%s] %s: %s%n", m.getTimestamp(), who, m.getMessage());
+            }
+        }
+        System.out.println("Type messages, '000' to exit chat.");
         while (true) {
-            System.out.println("--- Chat with " + contactPhone + " ---");
-            List<Chat> messages = chatController.getRecentChats(contactPhone); // Fetch recent chats
-            for (Chat chat : messages) {
-                System.out.println(chat.getSenderPhone() + ": " + chat.getMessage());
+            String msg = scanner.nextLine();
+            if (msg.equals("000")) {
+                System.out.println("Exiting chat.");
+                break;
             }
-            System.out.println("Enter your message (or '00' to go back): ");
-            String message = scanner.nextLine();
-            if (message.equals("00")) {
-                return; // Go back to the previous menu
+            boolean sent = chatController.sendMessage(currentUser.getId(), receiver.getId(), msg);
+            if (!sent) System.out.println("Failed to send message.");
+        }
+    }
+
+    private void settingsPage() {
+        while (true) {
+            System.out.println("\n==== Settings ====");
+            System.out.println("1. Change Username");
+            System.out.println("2. Change Password");
+            System.out.println("3. Change Email");
+            System.out.println("4. Back");
+            System.out.print("Option (or 000 to go back): ");
+            String input = scanner.nextLine();
+            if (input.equals("000") || input.equals("4")) return;
+            switch (input) {
+                case "1" -> changeUsername();
+                case "2" -> changePassword();
+                case "3" -> changeEmail();
+                default -> System.out.println("Invalid option.");
             }
-            chatController.sendMessage(contactPhone, message); // Send message
-            System.out.println("Message sent!");
+        }
+    }
+
+    private void changeUsername() {
+        System.out.print("Old Username (or 000 to cancel): ");
+        String oldU = scanner.nextLine();
+        if (oldU.equals("000")) return;
+        if (!oldU.equals(currentUser.getUsername())) {
+            System.out.println("Old username does not match.");
+            return;
+        }
+        System.out.print("New Username (or 000 to cancel): ");
+        String newU = scanner.nextLine();
+        if (newU.equals("000")) return;
+        System.out.print("Confirm New Username (or 000 to cancel): ");
+        String conf = scanner.nextLine();
+        if (!newU.equals(conf)) {
+            System.out.println("Confirmation mismatch.");
+            return;
+        }
+        boolean changed = userController.changeUsername(currentUser.getId(), newU);
+        if (changed) {
+            System.out.println("Username updated.");
+            currentUser.setUsername(newU);
+        } else {
+            System.out.println("Update failed.");
+        }
+    }
+
+    private void changePassword() {
+        System.out.print("Old Password (or 000 to cancel): ");
+        String oldP = scanner.nextLine();
+        if (oldP.equals("000")) return;
+        if (!oldP.equals(currentUser.getPassword())) {
+            System.out.println("Old password does not match.");
+            return;
+        }
+        System.out.print("New Password (or 000 to cancel): ");
+        String newP = scanner.nextLine();
+        if (newP.equals("000")) return;
+        System.out.print("Confirm New Password (or 000 to cancel): ");
+        String conf = scanner.nextLine();
+        if (!newP.equals(conf)) {
+            System.out.println("Confirmation mismatch.");
+            return;
+        }
+        boolean changed = userController.changePassword(currentUser.getId(), newP);
+        if (changed) {
+            System.out.println("Password updated.");
+            currentUser.setPassword(newP);
+        } else {
+            System.out.println("Update failed.");
+        }
+    }
+
+    private void changeEmail() {
+        System.out.print("Old Email (or 000 to cancel): ");
+        String oldE = scanner.nextLine();
+        if (oldE.equals("000")) return;
+        if (!oldE.equals(currentUser.getEmail())) {
+            System.out.println("Old email does not match.");
+            return;
+        }
+        System.out.print("New Email (or 000 to cancel): ");
+        String newE = scanner.nextLine();
+        if (newE.equals("000")) return;
+        System.out.print("Confirm New Email (or 000 to cancel): ");
+        String conf = scanner.nextLine();
+        if (!newE.equals(conf)) {
+            System.out.println("Confirmation mismatch.");
+            return;
+        }
+        boolean changed = userController.changeEmail(currentUser.getId(), newE);
+        if (changed) {
+            System.out.println("Email updated.");
+            currentUser.setEmail(newE);
+        } else {
+            System.out.println("Update failed.");
         }
     }
 }

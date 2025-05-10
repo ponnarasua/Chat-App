@@ -1,21 +1,33 @@
 package controller;
 
-import dao.UserDAO;
+import dao.UserDao;
 import model.User;
 
-public class UsersController {
-    private UserDAO userDAO;
+public class UserController {
+    private UserDao userDao = new UserDao();
 
-    public UsersController(UserDAO userDAO) {
-        this.userDAO = userDAO;
+    public boolean register(String username, String phone, String password, String email) {
+        User user = new User(username, phone, password, email);
+        return userDao.register(user);
     }
 
-    public boolean registerUser (String name, String phone, String password, String email, String dob, String role) {
-        User user = new User(name, phone, password, email, dob, role);
-        return userDAO.registerUser (user);
+    public User login(String phone, String password) {
+        return userDao.login(phone, password);
     }
 
-    public User loginUser (String phone, String password) {
-        return userDAO.loginUser (phone, password);
+    public boolean changeUsername(int userId, String newUsername) {
+        return userDao.updateUsername(userId, newUsername);
+    }
+
+    public boolean changePassword(int userId, String newPassword) {
+        return userDao.updatePassword(userId, newPassword);
+    }
+
+    public boolean changeEmail(int userId, String newEmail) {
+        return userDao.updateEmail(userId, newEmail);
+    }
+
+    public User getUserByPhone(String phone) {
+        return userDao.getUserByPhone(phone);
     }
 }
